@@ -86,12 +86,20 @@ func iniciarCliente(enderecoServidor string) {
 	}
 	defer conexao.Close()
 
+	_, err = conexao.Write([]byte("CONECTADO"))
+	if err != nil {
+		fmt.Println("Erro ao enviar handshake:", err)
+		os.Exit(1)
+	}
+
 	fmt.Println("Conectado ao servidor!")
 	fmt.Println("Tunel ativo. Pode conectar no Minecraft.\n")
 
 	go receberDadosCliente(conexao)
 	enviarDadosCliente(conexao)
 }
+
+
 
 func receberDadosCliente(conexao *net.UDPConn) {
 	buffer := make([]byte, 4096)
