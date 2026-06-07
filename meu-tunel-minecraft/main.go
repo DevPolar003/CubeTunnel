@@ -20,19 +20,17 @@ func retransmitirParaOutros(conexao *net.UDPConn, dados []byte, origem *net.UDPA
 			_, err := conexao.WriteToUDP(dados, cliente)
 			if err != nil {
 				fmt.Println("Erro ao reenviar para", endereco, ":", err)
-			} else {
-				fmt.Printf("  ➜ Reenviado para %s\n", endereco)
 			}
 		}
 	}
 }
 
 func iniciarServidor(endereco string) {
-	fmt.Println("🎮 Iniciando o túnel multiplayer (SERVIDOR)...")
+	fmt.Println("Iniciando servidor do tunel...")
 
 	addr, err := net.ResolveUDPAddr("udp", endereco)
 	if err != nil {
-		fmt.Println("Erro ao resolver endereço:", err)
+		fmt.Println("Erro ao resolver endereco:", err)
 		os.Exit(1)
 	}
 
@@ -43,62 +41,55 @@ func iniciarServidor(endereco string) {
 	}
 	defer conexao.Close()
 
-	fmt.Printf("✅ Ouvindo em %s... Pronto para receber dados.\n", endereco)
-	fmt.Println("⏳ Aguardando conexão de jogadores...\n")
+	fmt.Printf("Servidor ouvindo em %s\n", endereco)
+	fmt.Println("Aguardando conexoes...\n")
 
 	buffer := make([]byte, 4096)
 
 	for {
 		n, remoteAddr, err := conexao.ReadFromUDP(buffer)
 		if err != nil {
-			fmt.Println("Erro ao capturar os pacotes de dados:", err)
-			os.Exit(1)
+			fmt.Println("Erro ao receber dados:", err)
+			continue
 		}
 
 		mutex.Lock()
 		clientesConectados[remoteAddr.String()] = remoteAddr
 		mutex.Unlock()
 
-		mensagem := string(buffer[:n])
-		fmt.Printf("📍 Recebido de %s: %s\n", remoteAddr.String(), mensagem)
-		fmt.Printf("👥 Clientes ativos: %d\n\n", len(clientesConectados))
+		fmt.Printf("Cliente conectado: %s (Total: %d)\n", remoteAddr.String(), len(clientesConectados))
 		
 		retransmitirParaOutros(conexao, buffer[:n], remoteAddr)
 	}
 }
 
 func iniciarCliente(enderecoServidor string) {
-	fmt.Println("🎮 Iniciando o túnel multiplayer (CLIENTE)...")
-	fmt.Printf("🔗 Conectando a %s...\n\n", enderecoServidor)
+	fmt.Println("Conectando ao servidor do tunel...")
+	fmt.Printf("Endereco: %s\n\n", enderecoServidor)
 
-	
 	serverAddr, err := net.ResolveUDPAddr("udp", enderecoServidor)
 	if err != nil {
-		fmt.Println("❌ Erro ao resolver servidor:", err)
+		fmt.Println("Erro ao resolver servidor:", err)
 		os.Exit(1)
 	}
 
-	
 	localAddr, err := net.ResolveUDPAddr("udp", "0.0.0.0:0")
 	if err != nil {
-		fmt.Println("❌ Erro ao resolver endereço local:", err)
+		fmt.Println("Erro ao resolver endereco local:", err)
 		os.Exit(1)
 	}
 
 	conexao, err := net.DialUDP("udp", localAddr, serverAddr)
 	if err != nil {
-		fmt.Println("❌ Erro ao conectar ao servidor:", err)
+		fmt.Println("Erro ao conectar ao servidor:", err)
 		os.Exit(1)
 	}
 	defer conexao.Close()
 
-	fmt.Println("✅ Conectado ao servidor!")
-	fmt.Println("📤 Seu Minecraft agora está tunnelizado!\n")
+	fmt.Println("Conectado ao servidor!")
+	fmt.Println("Tunel ativo. Pode conectar no Minecraft.\n")
 
-	
 	go receberDadosCliente(conexao)
-
-	
 	enviarDadosCliente(conexao)
 }
 
@@ -106,14 +97,10 @@ func receberDadosCliente(conexao *net.UDPConn) {
 	buffer := make([]byte, 4096)
 
 	for {
-		n, _, err := conexao.ReadFromUDP(buffer)
+		_, _, err := conexao.ReadFromUDP(buffer)
 		if err != nil {
-			fmt.Println("❌ Erro ao receber dados:", err)
 			return
 		}
-
-		
-		fmt.Printf("📥 Recebido %d bytes de outro jogador\n", n)
 	}
 }
 
@@ -123,23 +110,19 @@ func enviarDadosCliente(conexao *net.UDPConn) {
 	for {
 		n, err := os.Stdin.Read(buffer)
 		if err != nil {
-			fmt.Println("❌ Erro ao ler entrada:", err)
 			return
 		}
 
 		_, err = conexao.Write(buffer[:n])
 		if err != nil {
-			fmt.Println("❌ Erro ao enviar:", err)
 			return
 		}
-
-		fmt.Printf("📤 Enviado %d bytes ao servidor\n", n)
 	}
 }
 
 func main() {
 	modo := flag.String("modo", "host", "host ou join")
-	endereco := flag.String("endereco", "0.0.0.0:9999", "endereço para escutar ou conectar")
+	endereco := flag.String("endereco", "0.0.0.0:9999", "endereco para escutar ou conectar")
 	flag.Parse()
 
 	if *modo == "host" {
@@ -147,7 +130,7 @@ func main() {
 	} else if *modo == "join" {
 		iniciarCliente(*endereco)
 	} else {
-		fmt.Println("❌ Modo inválido. Use -modo=host ou -modo=join")
+		fmt.Println("Modo invalido. Use -modo=host ou -modo=join")
 		os.Exit(1)
 	}
 }
